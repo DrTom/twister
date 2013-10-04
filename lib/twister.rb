@@ -1,5 +1,6 @@
 # require 'pry'
 require 'net/ssh'
+require 'net/scp'
 require 'net_ssh_ext'
 require 'rubygems'
 require 'slop'

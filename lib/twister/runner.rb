@@ -14,8 +14,22 @@ module Twister
     def backup 
       Net::SSH.start @host, @torquebox_user do |ssh|
         ssh.ex_prefix= "cd #{@app_dir};export RAILS_ENV=#{@rails_env}; #{pg_env}"
-        ssh.ex_with_print! "pg_dump -E utf-8 -F p -Z 5 -O --no-acl -f 'tmp/backup_#{Time.now.iso8601}.pgsql.gz' #{@database_name}"
+        ssh.ex_with_print! "pg_dump -E utf-8 -F p -Z 5 -O --no-acl -f 'tmp/backup_#{Time.now.iso8601}.pgsql.gz' #{@database_database}"
       end
+      self
+    end
+
+
+
+    def create_and_fetch_db_dump
+      name=  "dump_#{@rails_env}_#{Time.now.iso8601}.pgbin"
+      remote_file_path = "/tmp/#{name}"
+      local_file_path = "tmp/#{name}"
+      Net::SSH.start @host, @torquebox_user do |ssh|
+        ssh.ex_prefix= "cd #{@app_dir};export RAILS_ENV=#{@rails_env}; #{pg_env}"
+        ssh.ex_with_print! "pg_dump -E utf-8 -F c -Z 5 -O --no-acl -f '#{remote_file_path}' #{@database_database}"
+      end
+      Net::SCP.download! @host, @torquebox_user, remote_file_path, local_file_path
       self
     end
 
@@ -49,7 +63,7 @@ module Twister
         ssh.ex_prefix= "cd #{@app_dir};export RAILS_ENV=#{@rails_env}; #{pg_env}"
         sql= <<-SQL
         SELECT pg_terminate_backend(pg_stat_activity.#{@pgpidname}) 
-          FROM pg_stat_activity WHERE pg_stat_activity.datname = '#{@database_name}';
+          FROM pg_stat_activity WHERE pg_stat_activity.datname = '#{@database_database}';
         SQL
         ssh.ex_with_print! "psql -c \"#{sql}\""
       end
@@ -59,11 +73,11 @@ module Twister
     def restore_db_from_db
       Net::SSH.start @host, @torquebox_user do |ssh|
         ssh.ex_prefix= "cd #{@app_dir};"
-        ssh.ex_with_print! "dropdb --if-exists -U postgres #{@database_name}"
-        ssh.ex_with_print! "createdb -U postgres #{@database_name}"
+        ssh.ex_with_print! "dropdb --if-exists -U postgres #{@database_database}"
+        ssh.ex_with_print! "createdb -U postgres #{@database_database}"
         # we could get rid of the file entirely
-        ssh.ex_with_print! "pg_dump -U postgres -E utf-8 -F p -Z 5 -O --no-acl -f tmp/productive_data.pgsql.gz #{@database_name_source}"
-        ssh.ex_with_print! "cat tmp/productive_data.pgsql.gz | gunzip | psql -U postgres -q #{@database_name}"
+        ssh.ex_with_print! "pg_dump -U postgres -E utf-8 -F p -Z 5 -O --no-acl -f tmp/productive_data.pgsql.gz #{@database_database_source}"
+        ssh.ex_with_print! "cat tmp/productive_data.pgsql.gz | gunzip | psql -U postgres -q #{@database_database}"
       end
       self
     end
