@@ -65,7 +65,7 @@ module Twister
         SELECT pg_terminate_backend(pg_stat_activity.#{@pgpidname}) 
           FROM pg_stat_activity WHERE pg_stat_activity.datname = '#{@database_database}';
         SQL
-        ssh.ex_with_print! "psql -c \"#{sql}\""
+        ssh.ex_with_print! %<psql "#{@database_username}" -c "#{sql}">
       end
       self
     end
