@@ -15,9 +15,19 @@ module Twister
 
     def main
 
-      opts = Slop.parse help: true, banner: "Usage: twister [options] command environment [options]" do
 
-        on :c, :config, "path to alternative configuration file", argument: true  
+      opts = Slop.parse help: true, banner: "Usage: twister [options] action|command environment [options]" do 
+
+        on :c, :config, "Specify the path to alternative configuration file", argument: true  
+
+        on :a, "show-actions", "Show the defined basic actions" do
+          puts Twister::Runner.instance_methods(false).sort
+          exit 0
+        end
+
+        on :m, "show-commands", 
+          "Show the (in the configuration) defined commands (sequence of actions) for the environment", 
+          argument: true 
 
         on :v, :version, 'Print the version' do
           puts "Version #{Twister::VERSION}"
@@ -26,15 +36,24 @@ module Twister
 
       end
 
+      if environment = opts.to_hash[:"show-commands"]
+        config = YAML.load_file(opts[:config] || 'config/twister.yml')
+        puts config[environment]["commands"].keys
+        exit 0
+      end
+
       action = ARGV.shift
       environment = ARGV.shift
 
       if action and environment
         config = YAML.load_file(opts[:config] || 'config/twister.yml')
         twister_runner = Twister::Runner.new config[environment]["variables"]
-        steps = config[environment]["steps"][action]
-        steps.each do |step|
-          twister_runner.send step
+        if commands = config[environment]["commands"][action]
+          commands.each do |step|
+            twister_runner.send step
+          end
+        else
+          twister_runner.send action
         end
       else
         puts %<I don't understand what I am supposed to do, try "twister --help"!>

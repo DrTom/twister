@@ -19,8 +19,6 @@ module Twister
       self
     end
 
-
-
     def create_and_fetch_db_dump
       name=  "dump_#{@rails_env}_#{Time.now.iso8601}.pgbin"
       remote_file_path = "/tmp/#{name}"
@@ -33,7 +31,7 @@ module Twister
       self
     end
 
-    def undeploy
+    def undeploy_descriptor
       Net::SSH.start @host, @torquebox_user do |ssh|
         ssh.ex_prefix= "cd #{@app_dir};export RAILS_ENV=#{@rails_env}; #{@load_torquebox_env_cmd};" 
         ssh.ex_with_print! "rm -f $JBOSS_HOME/standalone/deployments/#{descriptor_name}.deployed"
@@ -110,7 +108,7 @@ module Twister
       self
     end
 
-    def deploy
+    def deploy_descriptor
       Net::SSH.start @host, @torquebox_user do |ssh|
         ssh.ex_prefix= "cd #{@app_dir};export RAILS_ENV=#{@rails_env}; #{@load_torquebox_env_cmd};" 
         ssh.ex_with_print! "cp #{@descriptor} $JBOSS_HOME/standalone/deployments/#{descriptor_name}"
@@ -118,6 +116,8 @@ module Twister
       end
       self
     end
+
+    private 
 
     def pg_env 
       { "@database_host" => "PGHOST",
