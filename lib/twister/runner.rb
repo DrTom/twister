@@ -117,6 +117,14 @@ module Twister
       self
     end
 
+    def restart_all
+      Net::SSH.start @host, @torquebox_user do |ssh|
+        ssh.ex_prefix= "cd #{@app_dir}; export RAILS_ENV=#{@rails_env}; load_rbenv; " 
+        ssh.ex_with_print! "touch tmp/restart-all.txt"
+      end
+      self
+    end
+
     private 
 
     def pg_env 
